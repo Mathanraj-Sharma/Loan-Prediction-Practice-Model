@@ -5,6 +5,8 @@ import warnings
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression 
 from sklearn.metrics import accuracy_score
+from sklearn.model_selection import StratifiedKFold
+from sklearn import metrics
 import warnings       
 
 train = pd.read_csv('/home/user/Desktop/tensorflow/loan_prediction/train.csv')
@@ -59,25 +61,24 @@ X = pd.get_dummies(X)
 train = pd.get_dummies(train) 
 test = pd.get_dummies(test)
 
-#split train data into train and validation
-x_train, x_cv, y_train, y_cv = train_test_split(X,y, test_size =0.3)
 
-model = LogisticRegression(solver='lbfgs') 
-model.fit(x_train, y_train)
+i = 1
+kf = StratifiedKFold(n_splits = 5, random_state = 1,shuffle = True)
+for train_index, test_index in kf.split(X,y):
+	print('\n{} of kfold {}'.format(i,kf.n_splits))
+	xtr,xvl = X.loc[train_index],X.loc[test_index]     
+	ytr,yvl = y[train_index],y[test_index]
 
-#set hyperparameters 
-LogisticRegression(C=1.0, class_weight=None, dual=False, fit_intercept=True, intercept_scaling=1, 
-	max_iter=10000, multi_class='ovr', n_jobs=1, penalty='l2', random_state=1, solver='liblinear', tol=0.0001,          
-	verbose=0, warm_start=False)
+	model = LogisticRegression(random_state=1, solver = 'lbfgs', max_iter = 10000)
+	model.fit(xtr, ytr)  
+	pred_test = model.predict(xvl)
+	score = accuracy_score(yvl,pred_test)
+	print('accuracy_score',score)
+	i += 1
 
-#validate trained model using validation set 
-pred_cv = model.predict(x_cv)
-score = accuracy_score(y_cv,pred_cv)
-
-print("Model Accuracy = ",score)
-
-#prediction
 pred_test = model.predict(test)
+pred = model.predict_proba(xvl)[:,1]
+
 
 submission = pd.read_csv("sample_submission.csv")
 submission['Loan_Status'] = pred_test 
@@ -87,3 +88,5 @@ submission['Loan_Status'].replace(0, 'N',inplace=True)
 submission['Loan_Status'].replace(1, 'Y',inplace=True)
 
 pd.DataFrame(submission, columns=['Loan_ID','Loan_Status']).to_csv('logistic.csv')
+
+
