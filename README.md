@@ -6,5 +6,6 @@ sklearn
 numpy
 seaborn
 matplotlib
+pandas
 
 
